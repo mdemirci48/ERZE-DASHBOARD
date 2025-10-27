@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERZE Dashboard - P&L</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>ERZE P&L Dashboard</h1>
+        <div class="nav-links">
+            <a href="index.html">Main Dashboard</a>
+        </div>
+    </header>
+    <main>
+        <div class="dashboard-container">
+            <div class="date-controls">
+                <button id="prev-month">Previous Month</button>
+                <span id="current-period"></span>
+                <button id="next-month">Next Month</button>
+                <button id="refresh-data">Refresh</button>
+                 <a href="index.html" class="nav-button">Main Dashboard</a>
+                 <a href="live-expenses.html" class="nav-button">Live Expenses (IZMIR)</a>
+                 <a href="live-expenses-urfa.html" class="nav-button">Live Expenses (URFA)</a>
+                 <a href="live-expenses-flex.html" class="nav-button">Live Expenses (FLEX)</a>
+            </div>
+            
+            <h2 class="table-title">P&L Summary</h2>
+            <div class="table-container">
+                <table id="pnl-table" class="data-table">
+                    <thead></thead>
+                    <tbody id="pnl-table-body"></tbody>
+                </table>
+            </div>
+
+            <!-- Branch-specific P&L tables -->
+            <div id="branch-pnl-container">
+                <h2 class="table-title">IZMIR P&L</h2>
+                <div id="izmir-pnl-container" class="table-container">
+                    <table id="izmir-pnl-table" class="data-table">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <h2 class="table-title">URFA P&L</h2>
+                <div class="table-container">
+                    <table id="urfa-pnl-table" class="data-table">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <h2 class="table-title">FLEX P&L</h2>
+                <div class="table-container">
+                    <table id="flex-pnl-table" class="data-table">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <div id="loading" class="loading-indicator">Loading...</div>
+    <div id="error">
+        <p id="error-text"></p>
+    </div>
+    <script src="pnl.js"></script>
+</body>
+</html>

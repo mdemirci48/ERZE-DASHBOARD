@@ -1,0 +1,266 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f7fa;
+    color: #333;
+    line-height: 1.6;
+}
+
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e0e6ed;
+}
+
+header h1 {
+    color: #2c3e50;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.date-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.date-controls button {
+    padding: 8px 16px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.date-controls button:hover {
+    background-color: #2980b9;
+}
+
+.date-controls button#refresh-data {
+    background-color: #27ae60;
+}
+
+.date-controls button#refresh-data:hover {
+    background-color: #219653;
+}
+
+#current-period {
+    font-weight: 600;
+    font-size: 16px;
+    color: #2c3e50;
+}
+
+.nav-button {
+    padding: 8px 16px;
+    background-color: #3498db;
+    color: white !important;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.nav-button:hover {
+    background-color: #2980b9;
+}
+
+.loading-indicator {
+    text-align: center;
+    padding: 40px;
+    font-size: 18px;
+    color: #7f8c8d;
+}
+
+.error-message {
+    background-color: #e74c3c;
+    color: white;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.table-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-bottom: 30px; /* Add some space between tables */
+}
+
+#izmir-pnl-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.data-table th {
+    background-color: #34495e;
+    color: white;
+    padding: 15px 12px;
+    text-align: center;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+
+.data-table td {
+    padding: 12px;
+    text-align: right;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.data-table tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.data-table tr:hover {
+    background-color: #edf2f7;
+}
+
+.data-table td:first-child,
+.data-table th:first-child {
+    text-align: left;
+    font-weight: 600;
+}
+
+.data-table .category-total {
+    font-weight: 700;
+    background-color: #f1f8ff !important;
+}
+
+.data-table .discount-row {
+    color: #e74c3c;
+}
+
+.data-table .final-total {
+    font-weight: 800;
+    background-color: #2c3e50 !important;
+    color: white;
+}
+
+.table-title {
+    color: #2c3e50;
+    font-size: 22px;
+    font-weight: 600;
+    margin-top: 40px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Green for Income Table */
+#income-table th {
+    background-color: #27ae60; /* A shade of green */
+}
+
+#income-table .l3ma-total {
+    background-color: #27ae60 !important; /* Ensure it overrides other styles */
+    color: white;
+    font-weight: bold;
+}
+
+/* Red for Expense Tables */
+#expense-720-table th,
+#expense-730-table th,
+#expense-760-table th,
+#expense-770-table th,
+#expense-780-table th {
+    background-color: #e74c3c; /* A shade of red */
+}
+
+#expense-720-table .l3ma-total,
+#expense-730-table .l3ma-total,
+#expense-760-table .l3ma-total,
+#expense-770-table .l3ma-total,
+#expense-780-table .l3ma-total {
+    background-color: #e74c3c !important; /* Ensure it overrides other styles */
+    color: white;
+    font-weight: bold;
+}
+
+/* Red for Raw Materials Table */
+#raw-materials-table th {
+    background-color: #e74c3c; /* A shade of red */
+}
+
+#raw-materials-table .l3ma-total {
+    background-color: #e74c3c !important; /* Ensure it overrides other styles */
+    color: white;
+    font-weight: bold;
+}
+
+@media (max-width: 1200px) {
+    .dashboard-container {
+        padding: 15px;
+    }
+    
+    .data-table {
+        font-size: 12px;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 8px 6px;
+    }
+}
+
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .date-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .data-table {
+        display: block;
+        overflow-x: auto;
+    }
+}
+.highlight-red {
+    background-color: #ffcccc !important; /* Light red */
+    color: #a60000 !important;
+    font-weight: bold;
+}
+
+.highlight-green {
+    background-color: #ccffcc !important; /* Light green */
+    color: #006300 !important;
+    font-weight: bold;
+}
+.subtotal-row {
+    background-color: #e9ecef !important;
+    font-weight: bold;
+}
+
+.grand-total-row {
+    background-color: #343a40 !important;
+    color: white !important;
+    font-size: 1.1em;
+    font-weight: bold;
+}
