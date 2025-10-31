@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERZE Dashboard - Live Expenses - FLEX</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Live Expense Tracker - FLEX</h1>
+        <div class="nav-links">
+            <a href="index.html" class="nav-button">Main Dashboard</a>
+            <a href="pnl.html" class="nav-button">P&L Summary</a>
+        </div>
+    </header>
+    <main>
+        <div class="dashboard-container">
+            <h2 id="table-title-live" class="table-title">Live Expenses</h2>
+            <div id="live-expense-container" class="table-container">
+                <table id="live-expense-table" class="data-table">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="dashboard-container">
+            <h2 id="table-title-raw-materials" class="table-title">Raw Materials Live Cost - FLEX</h2>
+            <div id="raw-materials-container" class="table-container">
+                <table id="raw-materials-table" class="data-table">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+    <div id="loading" class="loading-indicator">Loading...</div>
+    <div id="error">
+        <p id="error-text"></p>
+    </div>
+    <script src="live-expenses-flex.js"></script>
+</body>
+</html>
