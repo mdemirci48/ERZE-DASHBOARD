@@ -1,8 +1,6 @@
 const express = require('express');
 const sql = require('mssql');
 const path = require('path');
-const session = require('express-session');
-const bcrypt = require('bcrypt');
 const app = express();
 
 // Load configuration - try to load local config first, fall back to default
@@ -18,33 +16,9 @@ try {
 const sqlConfig = config.sqlServer;
 const PORT = config.server.port;
 
-// Session configuration
-app.use(session({
-    secret: 'your-secret-key-change-this-in-production', // Change this to a secure secret
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false } // Set to true if using HTTPS
-}));
-
 // Middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // For parsing form data
 app.use(express.static(path.join(__dirname)));
-
-// Authentication middleware
-function requireAuth(req, res, next) {
-    if (req.session.authenticated) {
-        return next();
-    }
-
-    // For API requests, return JSON error instead of redirect
-    if (req.path.startsWith('/api/')) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    // For page requests, redirect to login
-    res.redirect('/login');
-}
 
 // Helper function to get date range for a month
 function getMonthDateRange(date) {
@@ -54,9 +28,6 @@ function getMonthDateRange(date) {
     const endDate = new Date(year, month + 1, 0);
     return { startDate, endDate };
 }
-
-// Protect all API routes with authentication
-app.use('/api', requireAuth);
 
 // API endpoint to fetch income data by account type and branch
 app.get('/api/income-summary', async (req, res) => {
@@ -307,12 +278,11 @@ app.get('/api/flex-raw-material', async (req, res) => {
         const flexRawMaterialQuery = `
             SELECT
                 SUM(J1.Debit - J1.Credit) AS Total
-            FROM JDT1 J1
-            INNER JOIN BEAS_ARBZEIT B ON J1.Ref1 = B.PostOutDocEntry
+            FROM OJDT J
+            INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
             WHERE
                 J1.BPLId = 4
-                AND J1.TransType = 60
-                AND J1.RefDate >= @startDate AND J1.RefDate <= @endDate
+                AND J.RefDate >= @startDate AND J.RefDate <= @endDate
                 AND (
                     J1.Account LIKE '620-01%' OR
                     J1.Account LIKE '895-01%'
@@ -403,7 +373,7 @@ app.get('/api/xpet-roll-purchases', async (req, res) => {
                 OJDT AS J 
                 INNER JOIN JDT1 AS J1 ON J.TransId = J1.TransId
             WHERE 
-                ((J1.ShortName = 'T012274' AND J1.ContraAct='891-01-0001') OR (J1.ShortName = 'T013833' AND J1.ContraAct='891-01-0001'))
+                ((J1.ShortName = 'T012274' AND (J.TransType = 19 OR J.TransType = 18)) OR (J1.ShortName = 'T013833' AND J1.ContraAct='891-01-0001'))
                 AND J.RefDate >= @startDate
                 AND J.RefDate <= @endDate
         `;
@@ -979,51 +949,13 @@ app.get('/api/avg-usd-currency', async (req, res) => {
     }
 });
  
-// Login routes
-app.get('/login', (req, res) => {
-    if (req.session.authenticated) {
-        return res.redirect('/');
-    }
-    res.sendFile(path.join(__dirname, 'login.html'));
-});
-
-app.post('/login', async (req, res) => {
-    const { password } = req.body;
-
-    // Get password from config or use default
-    const correctPassword = config.password || 'admin123'; // Default password, change in config
-
-    // For simplicity, we're doing plain text comparison. In production, hash the password in config
-    const isValidPassword = password === correctPassword;
-
-    if (isValidPassword) {
-        req.session.authenticated = true;
-        res.redirect('/');
-    } else {
-        res.send(`
-            <html>
-            <head><title>Login Failed</title></head>
-            <body>
-                <h1>Invalid password</h1>
-                <a href="/login">Try again</a>
-            </body>
-            </html>
-        `);
-    }
-});
-
-app.get('/logout', (req, res) => {
-    req.session.destroy();
-    res.redirect('/login');
-});
-
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'CEO Income Dashboard API is running' });
 });
 
-// Serve the main HTML file (protected)
-app.get('/', requireAuth, (req, res) => {
+// Serve the main HTML file
+app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -1031,7 +963,6 @@ app.get('/', requireAuth, (req, res) => {
 app.listen(PORT, () => {
     console.log(`CEO Income Dashboard server running on http://localhost:${PORT}`);
     console.log('Make sure to create config.local.js with your actual SQL Server credentials');
-    console.log('Default login password is "admin123" - change it in config.js');
 });
 
 module.exports = app;

@@ -230,11 +230,8 @@ function getMonthDateRange(date) {
 
 // Fetch net income summary data from the backend API
 async function fetchNetIncomeSummary(startDate, endDate) {
-    const response = await fetch(`/api/income-summary?startDate=${startDate}&endDate=${endDate}`, { redirect: 'error' });
+    const response = await fetch(`/api/income-summary?startDate=${startDate}&endDate=${endDate}`);
     if (!response.ok) {
-        if (response.status === 401) {
-            window.location.href = '/login';
-        }
         throw new Error(`HTTP error! status: ${response.status}`);
     }
     return await response.json();
@@ -242,11 +239,8 @@ async function fetchNetIncomeSummary(startDate, endDate) {
 
 // Fetch expense data for 720- accounts from the backend API
 async function fetchExpense720Summary(startDate, endDate) {
-    const response = await fetch(`/api/expense-720-summary?startDate=${startDate}&endDate=${endDate}`, { redirect: 'error' });
+    const response = await fetch(`/api/expense-720-summary?startDate=${startDate}&endDate=${endDate}`);
     if (!response.ok) {
-        if (response.status === 401) {
-            window.location.href = '/login';
-        }
         throw new Error(`HTTP error! status: ${response.status}`);
     }
     return await response.json();
@@ -254,11 +248,8 @@ async function fetchExpense720Summary(startDate, endDate) {
 
 // Fetch expense data for 730- accounts from the backend API
 async function fetchExpense730Summary(startDate, endDate) {
-    const response = await fetch(`/api/expense-730-summary?startDate=${startDate}&endDate=${endDate}`, { redirect: 'error' });
+    const response = await fetch(`/api/expense-730-summary?startDate=${startDate}&endDate=${endDate}`);
     if (!response.ok) {
-        if (response.status === 401) {
-            window.location.href = '/login';
-        }
         throw new Error(`HTTP error! status: ${response.status}`);
     }
     return await response.json();
@@ -266,11 +257,8 @@ async function fetchExpense730Summary(startDate, endDate) {
 
 // Fetch expense data for 760- accounts from the backend API
 async function fetchExpense760Summary(startDate, endDate) {
-    const response = await fetch(`/api/expense-760-summary?startDate=${startDate}&endDate=${endDate}`, { redirect: 'error' });
+    const response = await fetch(`/api/expense-760-summary?startDate=${startDate}&endDate=${endDate}`);
     if (!response.ok) {
-        if (response.status === 401) {
-            window.location.href = '/login';
-        }
         throw new Error(`HTTP error! status: ${response.status}`);
     }
     return await response.json();
@@ -278,11 +266,8 @@ async function fetchExpense760Summary(startDate, endDate) {
 
 // Fetch expense data for 770- accounts from the backend API
 async function fetchExpense770Summary(startDate, endDate) {
-    const response = await fetch(`/api/expense-770-summary?startDate=${startDate}&endDate=${endDate}`, { redirect: 'error' });
+    const response = await fetch(`/api/expense-770-summary?startDate=${startDate}&endDate=${endDate}`);
     if (!response.ok) {
-        if (response.status === 401) {
-            window.location.href = '/login';
-        }
         throw new Error(`HTTP error! status: ${response.status}`);
     }
     return await response.json();
@@ -291,11 +276,8 @@ async function fetchExpense770Summary(startDate, endDate) {
 
 // Fetch raw materials cost data from the backend API
 async function fetchRawMaterialsCostSummary(startDate, endDate) {
-    const response = await fetch(`/api/raw-materials-cost-summary?startDate=${startDate}&endDate=${endDate}`, { redirect: 'error' });
+    const response = await fetch(`/api/raw-materials-cost-summary?startDate=${startDate}&endDate=${endDate}`);
     if (!response.ok) {
-        if (response.status === 401) {
-            window.location.href = '/login';
-        }
         throw new Error(`HTTP error! status: ${response.status}`);
     }
     return await response.json();
@@ -304,11 +286,8 @@ async function fetchRawMaterialsCostSummary(startDate, endDate) {
 // Fetch average USD currency rate from the backend API
 async function fetchAvgUsdCurrency() {
     // The server-side query uses GETDATE() for the date range, so no need to pass startDate/endDate here
-    const response = await fetch(`/api/avg-usd-currency`, { redirect: 'error' });
+    const response = await fetch(`/api/avg-usd-currency`);
     if (!response.ok) {
-        if (response.status === 401) {
-            window.location.href = '/login';
-        }
         throw new Error(`HTTP error! status: ${response.status}`);
     }
     return await response.json();
