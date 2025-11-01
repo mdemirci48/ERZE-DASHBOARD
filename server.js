@@ -897,6 +897,448 @@ app.get('/api/live-raw-materials-flex', async (req, res) => {
         }
     }
 });
+// API endpoint for Live Expense Tracker
+app.get('/api/live-expenses', async (req, res) => {
+    let pool;
+    try {
+        pool = await sql.connect(sqlConfig);
+
+        const liveExpensesQuery = `
+            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+            DECLARE @EndDate   date = EOMONTH(@StartDate);
+
+            -- Derive period bounds for averages
+            DECLARE @MonthStart date      = @StartDate;
+            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
+            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
+            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+
+            WITH Base AS (
+                SELECT
+                    J1.Account,
+                    A.AcctName,
+                    LEFT(J1.Account, 3) AS AccountGroup,
+                    J.RefDate,
+                    (J1.Debit - J1.Credit) AS Amount
+                FROM OJDT J
+                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
+                INNER JOIN OACT A  ON J1.Account = A.AcctCode
+                WHERE
+                    (
+                        J1.Account LIKE '720-%' OR
+                        J1.Account LIKE '730-%' OR
+                        J1.Account LIKE '760-%' OR
+                        J1.Account LIKE '770-%'
+                    )
+                    AND J1.BPLId = 1
+                    AND J.RefDate >= @L6Start
+                    AND J.RefDate <= @EndDate
+            )
+            SELECT
+                AccountGroup,
+                Account,
+                AcctName AS AccountName,
+                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                CASE 
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
+                    ELSE 'Grand Total'
+                END AS LineType
+            FROM Base
+            GROUP BY 
+                GROUPING SETS (
+                    (AccountGroup, Account, AcctName),
+                    (AccountGroup),
+                    ()
+                )
+            ORDER BY
+                CASE WHEN AccountGroup IS NULL THEN 1 ELSE 0 END,
+                AccountGroup,
+                CASE 
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 0
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 1
+                    ELSE 2
+                END,
+                Account;
+        `;
+        
+        const result = await pool.request().query(liveExpensesQuery);
+        res.json(result.recordset);
+
+    } catch (error) {
+        console.error('Error fetching live expenses data:', error);
+        res.status(500).json({ error: 'Failed to fetch live expenses data', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+
+app.get('/api/live-expenses-urfa', async (req, res) => {
+    let pool;
+    try {
+        pool = await sql.connect(sqlConfig);
+
+        const liveExpensesQuery = `
+            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+            DECLARE @EndDate   date = EOMONTH(@StartDate);
+
+            -- Derive period bounds for averages
+            DECLARE @MonthStart date      = @StartDate;
+            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
+            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
+            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+
+            WITH Base AS (
+                SELECT
+                    J1.Account,
+                    A.AcctName,
+                    LEFT(J1.Account, 3) AS AccountGroup,
+                    J.RefDate,
+                    (J1.Debit - J1.Credit) AS Amount
+                FROM OJDT J
+                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
+                INNER JOIN OACT A  ON J1.Account = A.AcctCode
+                WHERE
+                    (
+                        J1.Account LIKE '720-%' OR
+                        J1.Account LIKE '730-%' OR
+                        J1.Account LIKE '760-%' OR
+                        J1.Account LIKE '770-%'
+                    )
+                    AND J1.BPLId = 3
+                    AND J.RefDate >= @L6Start
+                    AND J.RefDate <= @EndDate
+            )
+            SELECT
+                AccountGroup,
+                Account,
+                AcctName AS AccountName,
+                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                CASE
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
+                    ELSE 'Grand Total'
+                END AS LineType
+            FROM Base
+            GROUP BY
+                GROUPING SETS (
+                    (AccountGroup, Account, AcctName),
+                    (AccountGroup),
+                    ()
+                )
+            ORDER BY
+                CASE WHEN AccountGroup IS NULL THEN 1 ELSE 0 END,
+                AccountGroup,
+                CASE
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 0
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 1
+                    ELSE 2
+                END,
+                Account;
+        `;
+        
+        const result = await pool.request().query(liveExpensesQuery);
+        res.json(result.recordset);
+
+    } catch (error) {
+        console.error('Error fetching live expenses data for URFA:', error);
+        res.status(500).json({ error: 'Failed to fetch live expenses data for URFA', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+
+app.get('/api/live-raw-materials', async (req, res) => {
+    let pool;
+    try {
+        pool = await sql.connect(sqlConfig);
+
+        const liveRawMaterialsQuery = `
+            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+            DECLARE @EndDate   date = EOMONTH(@StartDate);
+            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+
+            WITH RawMaterials AS (
+                -- XPET TRAY
+                SELECT
+                    'XPET TRAY PURCHASES' AS PurchaseType,
+                    J.RefDate,
+                    (J1.Debit - J1.Credit) AS Amount
+                FROM OJDT AS J
+                INNER JOIN JDT1 AS J1 ON J.TransId = J1.TransId
+                WHERE J.TransType = 18
+                    AND J1.Account = '153-01-0004'
+                    AND J.RefDate >= @L6Start AND J.RefDate <= @EndDate
+                    AND J1.BPLId = 1
+                
+                UNION ALL
+
+                -- XPET ROLL
+                SELECT
+                    'XPET ROLL PURCHASES' AS PurchaseType,
+                    J.RefDate,
+                    (J1.Credit - J1.Debit) / 1.20 AS Amount
+                FROM OJDT AS J
+                INNER JOIN JDT1 AS J1 ON J.TransId = J1.TransId
+                WHERE ((J1.ShortName = 'T012274' AND (J.TransType = 19 OR J.TransType = 18)) OR (J1.ShortName = 'T013833' AND J1.ContraAct='891-01-0001'))
+                    AND J.RefDate >= @L6Start AND J.RefDate <= @EndDate
+
+                UNION ALL
+
+                -- XPET PAD
+                SELECT
+                    'XPET PAD PURCHASES' AS PurchaseType,
+                    J.RefDate,
+                    (J1.Credit - J1.Debit) / 1.20 AS Amount
+                FROM OJDT AS J
+                INNER JOIN JDT1 AS J1 ON J.TransId = J1.TransId
+                WHERE J1.ShortName = 'T010748'
+                    AND (J.TransType = 19 OR J.TransType = 18)
+                    AND J.RefDate >= @L6Start AND J.RefDate <= @EndDate
+                
+                UNION ALL
+
+                -- Raw Mat. (+40%)
+                SELECT
+                    'Raw Mat. (+40%)' AS PurchaseType,
+                    OINM.DocDate AS RefDate,
+                    (
+                        OINM.OutQty * ISNULL(
+                            CASE
+                                WHEN OINM.Currency <> 'TRY' THEN OINM.Price * NULLIF(OINM.Rate, 0)
+                                ELSE OINM.Price
+                            END, 0)
+                    ) * 1.40 AS Amount
+                FROM OINM
+                LEFT JOIN OITM ON OITM.ItemCode = OINM.ItemCode
+                LEFT JOIN OWHS ON OWHS.WhsCode   = OINM.Warehouse
+                LEFT JOIN OITB ON OITB.ItmsGrpCod = OITM.ItmsGrpCod
+                WHERE
+                    OITB.ItmsGrpCod = 111
+                    AND OINM.TransType = 60
+                    AND OWHS.BPLId = 1
+                    AND CAST(OINM.DocDate AS date) >= @L6Start
+                    AND CAST(OINM.DocDate AS date) <= @EndDate
+            )
+            SELECT
+                PurchaseType,
+                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
+            FROM RawMaterials
+            GROUP BY PurchaseType
+            ORDER BY PurchaseType;
+        `;
+        
+        const result = await pool.request().query(liveRawMaterialsQuery);
+        res.json(result.recordset);
+
+    } catch (error) {
+        console.error('Error fetching live raw materials data:', error);
+        res.status(500).json({ error: 'Failed to fetch live raw materials data', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+
+app.get('/api/live-raw-materials-urfa', async (req, res) => {
+    let pool;
+    try {
+        pool = await sql.connect(sqlConfig);
+
+        const liveRawMaterialsQuery = `
+            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+            DECLARE @EndDate   date = EOMONTH(@StartDate);
+            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+
+            WITH RawMaterials AS (
+                -- Raw Mat. (+20%)
+                SELECT
+                    'Raw Mat. (+20%)' AS PurchaseType,
+                    OINM.DocDate AS RefDate,
+                    (
+                        OINM.OutQty * ISNULL(
+                            CASE
+                                WHEN OINM.Currency <> 'TRY' THEN OINM.Price * NULLIF(OINM.Rate, 0)
+                                ELSE OINM.Price
+                            END, 0)
+                    ) * 1.20 AS Amount
+                FROM OINM
+                LEFT JOIN OITM ON OITM.ItemCode = OINM.ItemCode
+                LEFT JOIN OWHS ON OWHS.WhsCode   = OINM.Warehouse
+                LEFT JOIN OITB ON OITB.ItmsGrpCod = OITM.ItmsGrpCod
+                WHERE
+                    OITB.ItmsGrpCod = 111
+                    AND OINM.TransType = 60
+                    AND OWHS.BPLId = 3
+                    AND CAST(OINM.DocDate AS date) >= @L6Start
+                    AND CAST(OINM.DocDate AS date) <= @EndDate
+            )
+            SELECT
+                PurchaseType,
+                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
+            FROM RawMaterials
+            GROUP BY PurchaseType
+            ORDER BY PurchaseType;
+        `;
+        
+        const result = await pool.request().query(liveRawMaterialsQuery);
+        res.json(result.recordset);
+
+    } catch (error) {
+        console.error('Error fetching live raw materials data for URFA:', error);
+        res.status(500).json({ error: 'Failed to fetch live raw materials data for URFA', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+
+app.get('/api/live-expenses-flex', async (req, res) => {
+    let pool;
+    try {
+        pool = await sql.connect(sqlConfig);
+
+        const liveExpensesQuery = `
+            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+            DECLARE @EndDate   date = EOMONTH(@StartDate);
+
+            -- Derive period bounds for averages
+            DECLARE @MonthStart date      = @StartDate;
+            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
+            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
+            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+
+            WITH Base AS (
+                SELECT
+                    J1.Account,
+                    A.AcctName,
+                    LEFT(J1.Account, 3) AS AccountGroup,
+                    J.RefDate,
+                    (J1.Debit - J1.Credit) AS Amount
+                FROM OJDT J
+                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
+                INNER JOIN OACT A  ON J1.Account = A.AcctCode
+                WHERE
+                    (
+                        J1.Account LIKE '720-%' OR
+                        J1.Account LIKE '730-%' OR
+                        J1.Account LIKE '760-%' OR
+                        J1.Account LIKE '770-%'
+                    )
+                    AND J1.BPLId = 4
+                    AND J.RefDate >= @L6Start
+                    AND J.RefDate <= @EndDate
+            )
+            SELECT
+                AccountGroup,
+                Account,
+                AcctName AS AccountName,
+                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                CASE
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
+                    ELSE 'Grand Total'
+                END AS LineType
+            FROM Base
+            GROUP BY
+                GROUPING SETS (
+                    (AccountGroup, Account, AcctName),
+                    (AccountGroup),
+                    ()
+                )
+            ORDER BY
+                CASE WHEN AccountGroup IS NULL THEN 1 ELSE 0 END,
+                AccountGroup,
+                CASE
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 0
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 1
+                    ELSE 2
+                END,
+                Account;
+        `;
+        
+        const result = await pool.request().query(liveExpensesQuery);
+        res.json(result.recordset);
+
+    } catch (error) {
+        console.error('Error fetching live expenses data for FLEX:', error);
+        res.status(500).json({ error: 'Failed to fetch live expenses data for FLEX', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+
+app.get('/api/live-raw-materials-flex', async (req, res) => {
+    let pool;
+    try {
+        pool = await sql.connect(sqlConfig);
+
+        const liveRawMaterialsQuery = `
+            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+            DECLARE @EndDate   date = EOMONTH(@StartDate);
+            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+
+            WITH RawMaterials AS (
+                SELECT
+                    'Raw Material' AS PurchaseType,
+                    J.RefDate,
+                    (J1.Debit - J1.Credit) AS Amount
+                FROM OJDT J
+                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
+                WHERE
+                    J1.BPLId = 4
+                    AND J.RefDate >= @L6Start AND J.RefDate <= @EndDate
+                    AND (
+                        J1.Account LIKE '620-01%' OR
+                        J1.Account LIKE '895-01%'
+                    )
+            )
+            SELECT
+                PurchaseType,
+                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
+            FROM RawMaterials
+            GROUP BY PurchaseType
+            ORDER BY PurchaseType;
+        `;
+        
+        const result = await pool.request().query(liveRawMaterialsQuery);
+        res.json(result.recordset);
+
+    } catch (error) {
+        console.error('Error fetching live raw materials data for FLEX:', error);
+        res.status(500).json({ error: 'Failed to fetch live raw materials data for FLEX', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
     } catch (error) {
         console.error('Error fetching XPET PAD PURCHASES data:', error);
         res.status(500).json({ error: 'Failed to fetch XPET PAD PURCHASES data', details: error.message });
