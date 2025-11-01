@@ -76,35 +76,40 @@ async function fetchDataForCurrentPeriod() {
             fetchNetIncomeSummary(dateRanges.current.start, dateRanges.current.end),
             fetchNetIncomeSummary(dateRanges.month1.start, dateRanges.month1.end),
             fetchNetIncomeSummary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchNetIncomeSummary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchNetIncomeSummary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchNetIncomeSummary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
 
         const allMonthlyExpense720Data = await Promise.all([
             fetchExpense720Summary(dateRanges.current.start, dateRanges.current.end),
             fetchExpense720Summary(dateRanges.month1.start, dateRanges.month1.end),
             fetchExpense720Summary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchExpense720Summary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchExpense720Summary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchExpense720Summary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
 
         const allMonthlyExpense730Data = await Promise.all([
             fetchExpense730Summary(dateRanges.current.start, dateRanges.current.end),
             fetchExpense730Summary(dateRanges.month1.start, dateRanges.month1.end),
             fetchExpense730Summary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchExpense730Summary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchExpense730Summary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchExpense730Summary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
 
         const allMonthlyExpense760Data = await Promise.all([
             fetchExpense760Summary(dateRanges.current.start, dateRanges.current.end),
             fetchExpense760Summary(dateRanges.month1.start, dateRanges.month1.end),
             fetchExpense760Summary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchExpense760Summary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchExpense760Summary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchExpense760Summary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
 
         const allMonthlyExpense770Data = await Promise.all([
             fetchExpense770Summary(dateRanges.current.start, dateRanges.current.end),
             fetchExpense770Summary(dateRanges.month1.start, dateRanges.month1.end),
             fetchExpense770Summary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchExpense770Summary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchExpense770Summary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchExpense770Summary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
 
 
@@ -112,35 +117,40 @@ async function fetchDataForCurrentPeriod() {
             fetchRawMaterialsCostSummary(dateRanges.current.start, dateRanges.current.end),
             fetchRawMaterialsCostSummary(dateRanges.month1.start, dateRanges.month1.end),
             fetchRawMaterialsCostSummary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchRawMaterialsCostSummary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchRawMaterialsCostSummary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchRawMaterialsCostSummary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
 
         const allMonthlyFlexRawMaterialData = await Promise.all([
             fetchFlexRawMaterialSummary(dateRanges.current.start, dateRanges.current.end),
             fetchFlexRawMaterialSummary(dateRanges.month1.start, dateRanges.month1.end),
             fetchFlexRawMaterialSummary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchFlexRawMaterialSummary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchFlexRawMaterialSummary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchFlexRawMaterialSummary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
         
         const allMonthlyXpetData = await Promise.all([
             fetchXpetTrayPurchasesSummary(dateRanges.current.start, dateRanges.current.end),
             fetchXpetTrayPurchasesSummary(dateRanges.month1.start, dateRanges.month1.end),
             fetchXpetTrayPurchasesSummary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchXpetTrayPurchasesSummary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchXpetTrayPurchasesSummary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchXpetTrayPurchasesSummary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
 
         const allMonthlyXpetRollData = await Promise.all([
             fetchXpetRollPurchasesSummary(dateRanges.current.start, dateRanges.current.end),
             fetchXpetRollPurchasesSummary(dateRanges.month1.start, dateRanges.month1.end),
             fetchXpetRollPurchasesSummary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchXpetRollPurchasesSummary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchXpetRollPurchasesSummary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchXpetRollPurchasesSummary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
 
         const allMonthlyXpetPadData = await Promise.all([
             fetchXpetPadPurchasesSummary(dateRanges.current.start, dateRanges.current.end),
             fetchXpetPadPurchasesSummary(dateRanges.month1.start, dateRanges.month1.end),
             fetchXpetPadPurchasesSummary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchXpetPadPurchasesSummary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchXpetPadPurchasesSummary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchXpetPadPurchasesSummary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
 
         processAndDisplayPnlTable(
@@ -179,6 +189,9 @@ function getDateRanges() {
 
     tempDate.setMonth(tempDate.getMonth() - 1);
     ranges.month3 = getMonthDateRange(new Date(tempDate));
+
+    tempDate.setMonth(tempDate.getMonth() - 1);
+    ranges.month4 = getMonthDateRange(new Date(tempDate));
     
     return ranges;
 }
@@ -370,8 +383,8 @@ function processAndDisplayPnlTable(income, allMonthlyExpense720Data, allMonthlyE
     const l3maBranchTotals = { 1: 0, 3: 0, 4: 0 };
     let l3maOverallTotal = 0;
     
-    if (rowsData.length >= 4) {
-        for (let i = 1; i < 4; i++) {
+    if (rowsData.length >= 5) {
+        for (let i = 2; i < 5; i++) {
             const monthData = rowsData[i];
             branchOrder.forEach(branchId => {
                 l3maBranchTotals[branchId] += monthData.values[branchId];
@@ -469,10 +482,10 @@ function processAndDisplayBranchPnl(branchDetails) {
         // Calculate Averages if possible
         const averages = {};
         const canHighlight = branchData.length >= 4;
-        if (canHighlight) {
+        if (branchData.length >= 5) {
             allExpenseKeys.forEach(key => {
-                if (branchData[1][key] !== undefined) {
-                    averages[key] = (branchData[1][key] + branchData[2][key] + branchData[3][key]) / 3;
+                if (branchData[2][key] !== undefined) {
+                    averages[key] = (branchData[2][key] + branchData[3][key] + branchData[4][key]) / 3;
                 }
             });
         }

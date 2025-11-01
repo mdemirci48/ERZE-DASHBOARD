@@ -4,8 +4,8 @@
 
 module.exports = {
     sqlServer: {
-        user: 'your_username',        // Replace with your SQL Server username
-        password: 'your_password',    // Replace with your SQL Server password
+        user: 'sa',        // Replace with your SQL Server username
+        password: 'Eropa2018!',    // Replace with your SQL Server password
         server: '192.168.101.222',   // SQL Server IP address
         database: 'ERZE_2025',        // Database name
         options: {
@@ -17,5 +17,6 @@ module.exports = {
     },
     server: {
         port: process.env.PORT || 3000
-    }
+    },
+    password: '141525'
 };

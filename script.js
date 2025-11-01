@@ -93,7 +93,8 @@ async function fetchDataForCurrentPeriod() {
             fetchNetIncomeSummary(dateRanges.current.start, dateRanges.current.end),
             fetchNetIncomeSummary(dateRanges.month1.start, dateRanges.month1.end),
             fetchNetIncomeSummary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchNetIncomeSummary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchNetIncomeSummary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchNetIncomeSummary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
         
         // Process and display the income data
@@ -104,7 +105,8 @@ async function fetchDataForCurrentPeriod() {
             fetchExpense720Summary(dateRanges.current.start, dateRanges.current.end),
             fetchExpense720Summary(dateRanges.month1.start, dateRanges.month1.end),
             fetchExpense720Summary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchExpense720Summary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchExpense720Summary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchExpense720Summary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
         processAndDisplayTable(expense720TableHead, expense720TableBody, allMonthlyExpense720Data, 'expense');
 
@@ -113,7 +115,8 @@ async function fetchDataForCurrentPeriod() {
             fetchExpense730Summary(dateRanges.current.start, dateRanges.current.end),
             fetchExpense730Summary(dateRanges.month1.start, dateRanges.month1.end),
             fetchExpense730Summary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchExpense730Summary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchExpense730Summary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchExpense730Summary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
         processAndDisplayTable(expense730TableHead, expense730TableBody, allMonthlyExpense730Data, 'expense');
 
@@ -122,7 +125,8 @@ async function fetchDataForCurrentPeriod() {
             fetchExpense760Summary(dateRanges.current.start, dateRanges.current.end),
             fetchExpense760Summary(dateRanges.month1.start, dateRanges.month1.end),
             fetchExpense760Summary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchExpense760Summary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchExpense760Summary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchExpense760Summary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
         processAndDisplayTable(expense760TableHead, expense760TableBody, allMonthlyExpense760Data, 'expense');
 
@@ -131,7 +135,8 @@ async function fetchDataForCurrentPeriod() {
             fetchExpense770Summary(dateRanges.current.start, dateRanges.current.end),
             fetchExpense770Summary(dateRanges.month1.start, dateRanges.month1.end),
             fetchExpense770Summary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchExpense770Summary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchExpense770Summary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchExpense770Summary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
         processAndDisplayTable(expense770TableHead, expense770TableBody, allMonthlyExpense770Data, 'expense');
 
@@ -141,7 +146,8 @@ async function fetchDataForCurrentPeriod() {
             fetchRawMaterialsCostSummary(dateRanges.current.start, dateRanges.current.end),
             fetchRawMaterialsCostSummary(dateRanges.month1.start, dateRanges.month1.end),
             fetchRawMaterialsCostSummary(dateRanges.month2.start, dateRanges.month2.end),
-            fetchRawMaterialsCostSummary(dateRanges.month3.start, dateRanges.month3.end)
+            fetchRawMaterialsCostSummary(dateRanges.month3.start, dateRanges.month3.end),
+            fetchRawMaterialsCostSummary(dateRanges.month4.start, dateRanges.month4.end)
         ]);
         // Fetch average USD currency rate
         let avgUsdCurrencyData = {}; // Initialize to an empty object
@@ -313,7 +319,7 @@ function processAndDisplayTable(tableHeadElement, tableBodyElement, allMonthlyDa
     let overallBranchTotals = { 1: 0, 3: 0, 4: 0 };
     let overallTotal = 0;
 
-    for (let i = 0; i < allMonthlyData.length; i++) { // Iterate based on the actual number of months fetched
+    for (let i = 0; i < allMonthlyData.length; i++) {
         const monthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
         const monthLabel = `${monthNames[monthDate.getMonth()]} ${monthDate.getFullYear()}`;
         const monthlyData = allMonthlyData[i]; // Data for this specific month
@@ -372,8 +378,8 @@ function processAndDisplayTable(tableHeadElement, tableBodyElement, allMonthlyDa
     let footerLabel = 'L3MA';
 
 
-    if (rowsData.length >= numMonthsToAverage + 1) { // +1 for the current month at index 0
-        for (let i = 1; i <= numMonthsToAverage; i++) { // Loop from index 1 to numMonthsToAverage (e.g., 1-9 for L9MA)
+    if (rowsData.length >= numMonthsToAverage + 2) { // We need at least 5 months of data now
+        for (let i = 2; i < numMonthsToAverage + 2; i++) { // Loop from index 2 to 4
             const monthData = rowsData[i];
             branchOrder.forEach(branchId => {
                 l3maBranchTotals[branchId] += monthData.values[branchId].value;
@@ -538,8 +544,8 @@ function processAndDisplayRawMaterialsTable(tableHeadElement, tableBodyElement, 
         let l3maTotalCost = 0;
  
         const numMonthsToAverage = 3;
-        if (rowsData.length >= numMonthsToAverage + 1) {
-            for (let i = 1; i <= numMonthsToAverage; i++) {
+        if (rowsData.length >= numMonthsToAverage + 2) {
+            for (let i = 2; i < numMonthsToAverage + 2; i++) {
                 const monthData = rowsData[i];
                 l3maKgIzmir += monthData.kgIzmir;
                 l3maSapCostIzmir += monthData.sapCostIzmir;

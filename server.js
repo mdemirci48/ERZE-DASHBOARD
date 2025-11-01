@@ -1,6 +1,8 @@
 const express = require('express');
 const sql = require('mssql');
 const path = require('path');
+const session = require('express-session');
+const bcrypt = require('bcrypt');
 const app = express();
 
 // Load configuration - try to load local config first, fall back to default
@@ -16,9 +18,26 @@ try {
 const sqlConfig = config.sqlServer;
 const PORT = config.server.port;
 
+// Session configuration
+app.use(session({
+    secret: 'your-secret-key-change-this-in-production', // Change this to a secure secret
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false } // Set to true if using HTTPS
+}));
+
 // Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname)));
+
+// Authentication middleware
+function requireAuth(req, res, next) {
+    if (req.session.authenticated) {
+        return next();
+    }
+    res.redirect('/login');
+}
 
 // Helper function to get date range for a month
 function getMonthDateRange(date) {
@@ -28,6 +47,9 @@ function getMonthDateRange(date) {
     const endDate = new Date(year, month + 1, 0);
     return { startDate, endDate };
 }
+
+// Protect all API routes with authentication
+app.use('/api', requireAuth);
 
 // API endpoint to fetch income data by account type and branch
 app.get('/api/income-summary', async (req, res) => {
@@ -278,11 +300,12 @@ app.get('/api/flex-raw-material', async (req, res) => {
         const flexRawMaterialQuery = `
             SELECT
                 SUM(J1.Debit - J1.Credit) AS Total
-            FROM OJDT J
-            INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
+            FROM JDT1 J1
+            INNER JOIN BEAS_ARBZEIT B ON J1.Ref1 = B.PostOutDocEntry
             WHERE
                 J1.BPLId = 4
-                AND J.RefDate >= @startDate AND J.RefDate <= @endDate
+                AND J1.TransType = 60
+                AND J1.RefDate >= @startDate AND J1.RefDate <= @endDate
                 AND (
                     J1.Account LIKE '620-01%' OR
                     J1.Account LIKE '895-01%'
@@ -444,9 +467,9 @@ app.get('/api/live-expenses', async (req, res) => {
 
             -- Derive period bounds for averages
             DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = DATEADD(DAY, -1, @MonthStart);
-            DECLARE @L3Start date         = DATEADD(MONTH, -3, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -6, @MonthStart);
+            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
+            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
+            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
 
             WITH Base AS (
                 SELECT
@@ -523,9 +546,9 @@ app.get('/api/live-expenses-urfa', async (req, res) => {
 
             -- Derive period bounds for averages
             DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = DATEADD(DAY, -1, @MonthStart);
-            DECLARE @L3Start date         = DATEADD(MONTH, -3, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -6, @MonthStart);
+            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
+            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
+            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
 
             WITH Base AS (
                 SELECT
@@ -599,9 +622,9 @@ app.get('/api/live-raw-materials', async (req, res) => {
         const liveRawMaterialsQuery = `
             DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
             DECLARE @EndDate   date = EOMONTH(@StartDate);
-            DECLARE @PrevMonthEnd date = DATEADD(DAY, -1, @StartDate);
-            DECLARE @L3Start date = DATEADD(MONTH, -3, @StartDate);
-            DECLARE @L6Start date = DATEADD(MONTH, -6, @StartDate);
+            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
 
             WITH RawMaterials AS (
                 -- XPET TRAY
@@ -696,9 +719,9 @@ app.get('/api/live-raw-materials-urfa', async (req, res) => {
         const liveRawMaterialsQuery = `
             DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
             DECLARE @EndDate   date = EOMONTH(@StartDate);
-            DECLARE @PrevMonthEnd date = DATEADD(DAY, -1, @StartDate);
-            DECLARE @L3Start date = DATEADD(MONTH, -3, @StartDate);
-            DECLARE @L6Start date = DATEADD(MONTH, -6, @StartDate);
+            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
 
             WITH RawMaterials AS (
                 -- Raw Mat. (+20%)
@@ -757,9 +780,9 @@ app.get('/api/live-expenses-flex', async (req, res) => {
 
             -- Derive period bounds for averages
             DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = DATEADD(DAY, -1, @MonthStart);
-            DECLARE @L3Start date         = DATEADD(MONTH, -3, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -6, @MonthStart);
+            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
+            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
+            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
 
             WITH Base AS (
                 SELECT
@@ -833,9 +856,9 @@ app.get('/api/live-raw-materials-flex', async (req, res) => {
         const liveRawMaterialsQuery = `
             DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
             DECLARE @EndDate   date = EOMONTH(@StartDate);
-            DECLARE @PrevMonthEnd date = DATEADD(DAY, -1, @StartDate);
-            DECLARE @L3Start date = DATEADD(MONTH, -3, @StartDate);
-            DECLARE @L6Start date = DATEADD(MONTH, -6, @StartDate);
+            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
 
             WITH RawMaterials AS (
                 SELECT
@@ -954,8 +977,31 @@ app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'CEO Income Dashboard API is running' });
 });
 
+// Login routes
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+app.post('/login', async (req, res) => {
+    const { password } = req.body;
+    const correctPassword = config.password || 'admin123';
+
+    // In a real app, you should use bcrypt to compare hashed passwords
+    if (password === correctPassword) {
+        req.session.authenticated = true;
+        res.redirect('/');
+    } else {
+        res.send('Invalid password. <a href="/login">Try again</a>');
+    }
+});
+
+app.get('/logout', (req, res) => {
+    req.session.destroy();
+    res.redirect('/login');
+});
+
 // Serve the main HTML file
-app.get('/', (req, res) => {
+app.get('/', requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
