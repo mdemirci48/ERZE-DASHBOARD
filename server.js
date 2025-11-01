@@ -985,11 +985,15 @@ app.get('/login', (req, res) => {
 app.post('/login', async (req, res) => {
     const { password } = req.body;
     const correctPassword = config.password || 'admin123';
+    const ceoPassword = config.ceoPassword || 'ceopassword';
 
     // In a real app, you should use bcrypt to compare hashed passwords
     if (password === correctPassword) {
         req.session.authenticated = true;
         res.redirect('/');
+    } else if (password === ceoPassword) {
+        req.session.authenticated = true;
+        res.redirect('/ceo-dashboard');
     } else {
         res.send('Invalid password. <a href="/login">Try again</a>');
     }
@@ -1003,6 +1007,10 @@ app.get('/logout', (req, res) => {
 // Serve the main HTML file
 app.get('/', requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/ceo-dashboard', requireAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'ceo-dashboard.html'));
 });
 
 // Start the server
