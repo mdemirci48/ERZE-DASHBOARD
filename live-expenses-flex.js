@@ -129,8 +129,8 @@ async function fetchLiveExpenses() {
         populateLiveExpenseTable(data);
 
         const grandTotal = data.find(item => item.LineType === 'Grand Total');
-        if (grandTotal && grandTotal.Last6M_Avg) {
-            nineMonthAvg = grandTotal.Last6M_Avg;
+        if (grandTotal && grandTotal.Last3M_Avg) {
+            nineMonthAvg = grandTotal.Last3M_Avg;
         }
 
     } catch (error) {
@@ -235,7 +235,7 @@ function populateRawMaterialsTable(data) {
 
     const averageRow = document.createElement('tr');
     averageRow.innerHTML = `
-        <td>6 Month Average</td>
+        <td>3 Month Average</td>
         <td>${formatCurrency(nineMonthAvg)}</td>
         <td></td>
         <td></td>
@@ -366,8 +366,8 @@ async function fetchLiveExpensesPrev() {
         populateLiveExpenseTablePrev(data);
 
         const grandTotal = data.find(item => item.LineType === 'Grand Total');
-        if (grandTotal && grandTotal.Last6M_Avg) {
-            nineMonthAvgPrev = grandTotal.Last6M_Avg;
+        if (grandTotal && grandTotal.Last3M_Avg) {
+            nineMonthAvgPrev = grandTotal.Last3M_Avg;
         }
 
     } catch (error) {
@@ -462,7 +462,7 @@ function populateRawMaterialsTablePrev(data) {
 
     const averageRow = document.createElement('tr');
     averageRow.innerHTML = `
-        <td>6 Month Average</td>
+        <td>3 Month Average</td>
         <td>${formatCurrency(nineMonthAvgPrev)}</td>
         <td></td>
         <td></td>
