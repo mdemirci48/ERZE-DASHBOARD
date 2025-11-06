@@ -254,6 +254,7 @@ async function fetchExpenseData(req, res, accountPrefix, endpointName) {
                 AND (T0.[SourceLine] <> -8 OR T0.[SourceLine] IS NULL)
                 AND T0.[BPLId] IN (1, 3, 4)
                 AND T0.[Account] LIKE @accountPrefix
+                AND T0.[Account] NOT IN ('730-01-0010','770-01-0026') -- Exclude amortisman'
             GROUP BY T0.[BPLId]
         `;
         
@@ -377,6 +378,17 @@ app.get('/api/xpet-tray-purchases', async (req, res) => {
             3: 0,
             4: 0
         };
+        res.json(processedData);
+            } catch (error) {
+        console.error('Error fetching XPET Tray cost data:', error);
+        res.status(500).json({ error: 'Failed to fetch XPET tray cost data', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+
 // API endpoint to fetch XPET ROLL PURCHASES for IZMIR
 app.get('/api/xpet-roll-purchases', async (req, res) => {
     const { startDate, endDate } = req.query;
@@ -414,6 +426,17 @@ app.get('/api/xpet-roll-purchases', async (req, res) => {
             3: 0,
             4: 0
         };
+        res.json(processedData);
+            } catch (error) {
+        console.error('Error fetching XPET Rolls cost data:', error);
+        res.status(500).json({ error: 'Failed to fetch XPET Rolls cost data', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+    
 
 // API endpoint to fetch XPET PAD PURCHASES for IZMIR
 app.get('/api/xpet-pad-purchases', async (req, res) => {
@@ -454,8 +477,17 @@ app.get('/api/xpet-pad-purchases', async (req, res) => {
         };
 
         res.json(processedData);
+            } catch (error) {
+        console.error('Error fetching XPET Pad cost data:', error);
+        res.status(500).json({ error: 'Failed to fetch XPET Pad cost data', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
 
-// API endpoint for Live Expense Tracker
+// API endpoint for Live Expense Tracker IZMIR
 app.get('/api/live-expenses', async (req, res) => {
     let pool;
     try {
@@ -491,6 +523,7 @@ app.get('/api/live-expenses', async (req, res) => {
                     AND J1.BPLId = 1
                     AND J.RefDate >= @L6Start
                     AND J.RefDate <= @EndDate
+                    AND J1.Account NOT IN ('730-01-0010','770-01-0026') -- Exclude amortisman
             )
             SELECT
                 AccountGroup,
@@ -534,86 +567,6 @@ app.get('/api/live-expenses', async (req, res) => {
         }
     }
 });
-
-app.get('/api/live-expenses-urfa', async (req, res) => {
-    let pool;
-    try {
-        pool = await sql.connect(sqlConfig);
-
-        const liveExpensesQuery = `
-            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
-            DECLARE @EndDate   date = EOMONTH(@StartDate);
-
-            -- Derive period bounds for averages
-            DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
-            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
-
-            WITH Base AS (
-                SELECT
-                    J1.Account,
-                    A.AcctName,
-                    LEFT(J1.Account, 3) AS AccountGroup,
-                    J.RefDate,
-                    (J1.Debit - J1.Credit) AS Amount
-                FROM OJDT J
-                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
-                INNER JOIN OACT A  ON J1.Account = A.AcctCode
-                WHERE
-                    (
-                        J1.Account LIKE '720-%' OR
-                        J1.Account LIKE '730-%' OR
-                        J1.Account LIKE '760-%' OR
-                        J1.Account LIKE '770-%'
-                    )
-                    AND J1.BPLId = 3
-                    AND J.RefDate >= @L6Start
-                    AND J.RefDate <= @EndDate
-            )
-            SELECT
-                AccountGroup,
-                Account,
-                AcctName AS AccountName,
-                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
-                CASE
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
-                    ELSE 'Grand Total'
-                END AS LineType
-            FROM Base
-            GROUP BY
-                GROUPING SETS (
-                    (AccountGroup, Account, AcctName),
-                    (AccountGroup),
-                    ()
-                )
-            ORDER BY
-                CASE WHEN AccountGroup IS NULL THEN 1 ELSE 0 END,
-                AccountGroup,
-                CASE
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 0
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 1
-                    ELSE 2
-                END,
-                Account;
-        `;
-        
-        const result = await pool.request().query(liveExpensesQuery);
-        res.json(result.recordset);
-
-    } catch (error) {
-        console.error('Error fetching live expenses data for URFA:', error);
-        res.status(500).json({ error: 'Failed to fetch live expenses data for URFA', details: error.message });
-    } finally {
-        if (pool) {
-            await pool.close();
-        }
-    }
-});
-
 app.get('/api/live-raw-materials', async (req, res) => {
     let pool;
     try {
@@ -710,201 +663,14 @@ app.get('/api/live-raw-materials', async (req, res) => {
         }
     }
 });
-
-app.get('/api/live-raw-materials-urfa', async (req, res) => {
-    let pool;
-    try {
-        pool = await sql.connect(sqlConfig);
-
-        const liveRawMaterialsQuery = `
-            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
-            DECLARE @EndDate   date = EOMONTH(@StartDate);
-            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
-            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
-            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
-
-            WITH RawMaterials AS (
-                -- Raw Mat. (+20%)
-                SELECT
-                    'Raw Mat. (+20%)' AS PurchaseType,
-                    OINM.DocDate AS RefDate,
-                    (
-                        OINM.OutQty * ISNULL(
-                            CASE
-                                WHEN OINM.Currency <> 'TRY' THEN OINM.Price * NULLIF(OINM.Rate, 0)
-                                ELSE OINM.Price
-                            END, 0)
-                    ) * 1.20 AS Amount
-                FROM OINM
-                LEFT JOIN OITM ON OITM.ItemCode = OINM.ItemCode
-                LEFT JOIN OWHS ON OWHS.WhsCode   = OINM.Warehouse
-                LEFT JOIN OITB ON OITB.ItmsGrpCod = OITM.ItmsGrpCod
-                WHERE
-                    OITB.ItmsGrpCod = 111
-                    AND OINM.TransType = 60
-                    AND OWHS.BPLId = 3
-                    AND CAST(OINM.DocDate AS date) >= @L6Start
-                    AND CAST(OINM.DocDate AS date) <= @EndDate
-            )
-            SELECT
-                PurchaseType,
-                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
-            FROM RawMaterials
-            GROUP BY PurchaseType
-            ORDER BY PurchaseType;
-        `;
-        
-        const result = await pool.request().query(liveRawMaterialsQuery);
-        res.json(result.recordset);
-
-    } catch (error) {
-        console.error('Error fetching live raw materials data for URFA:', error);
-        res.status(500).json({ error: 'Failed to fetch live raw materials data for URFA', details: error.message });
-    } finally {
-        if (pool) {
-            await pool.close();
-        }
-    }
-});
-
-app.get('/api/live-expenses-flex', async (req, res) => {
+// API endpoint for Previous Month Live Expense Tracker for IZMIR
+app.get('/api/live-expenses-prev', async (req, res) => {
     let pool;
     try {
         pool = await sql.connect(sqlConfig);
 
         const liveExpensesQuery = `
-            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
-            DECLARE @EndDate   date = EOMONTH(@StartDate);
-
-            -- Derive period bounds for averages
-            DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
-            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
-
-            WITH Base AS (
-                SELECT
-                    J1.Account,
-                    A.AcctName,
-                    LEFT(J1.Account, 3) AS AccountGroup,
-                    J.RefDate,
-                    (J1.Debit - J1.Credit) AS Amount
-                FROM OJDT J
-                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
-                INNER JOIN OACT A  ON J1.Account = A.AcctCode
-                WHERE
-                    (
-                        J1.Account LIKE '720-%' OR
-                        J1.Account LIKE '730-%' OR
-                        J1.Account LIKE '760-%' OR
-                        J1.Account LIKE '770-%'
-                    )
-                    AND J1.BPLId = 4
-                    AND J.RefDate >= @L6Start
-                    AND J.RefDate <= @EndDate
-            )
-            SELECT
-                AccountGroup,
-                Account,
-                AcctName AS AccountName,
-                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
-                CASE
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
-                    ELSE 'Grand Total'
-                END AS LineType
-            FROM Base
-            GROUP BY
-                GROUPING SETS (
-                    (AccountGroup, Account, AcctName),
-                    (AccountGroup),
-                    ()
-                )
-            ORDER BY
-                CASE WHEN AccountGroup IS NULL THEN 1 ELSE 0 END,
-                AccountGroup,
-                CASE
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 0
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 1
-                    ELSE 2
-                END,
-                Account;
-        `;
-        
-        const result = await pool.request().query(liveExpensesQuery);
-        res.json(result.recordset);
-
-    } catch (error) {
-        console.error('Error fetching live expenses data for FLEX:', error);
-        res.status(500).json({ error: 'Failed to fetch live expenses data for FLEX', details: error.message });
-    } finally {
-        if (pool) {
-            await pool.close();
-        }
-    }
-});
-
-app.get('/api/live-raw-materials-flex', async (req, res) => {
-    let pool;
-    try {
-        pool = await sql.connect(sqlConfig);
-
-        const liveRawMaterialsQuery = `
-            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
-            DECLARE @EndDate   date = EOMONTH(@StartDate);
-            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
-            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
-            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
-
-            WITH RawMaterials AS (
-                SELECT
-                    'Raw Material' AS PurchaseType,
-                    J.RefDate,
-                    (J1.Debit - J1.Credit) AS Amount
-                FROM OJDT J
-                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
-                WHERE
-                    J1.BPLId = 4
-                    AND J.RefDate >= @L6Start AND J.RefDate <= @EndDate
-                    AND (
-                        J1.Account LIKE '620-01%' OR
-                        J1.Account LIKE '895-01%'
-                    )
-            )
-            SELECT
-                PurchaseType,
-                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
-            FROM RawMaterials
-            GROUP BY PurchaseType
-            ORDER BY PurchaseType;
-        `;
-        
-        const result = await pool.request().query(liveRawMaterialsQuery);
-        res.json(result.recordset);
-
-    } catch (error) {
-        console.error('Error fetching live raw materials data for FLEX:', error);
-        res.status(500).json({ error: 'Failed to fetch live raw materials data for FLEX', details: error.message });
-    } finally {
-        if (pool) {
-            await pool.close();
-        }
-    }
-});
-// API endpoint for Live Expense Tracker
-app.get('/api/live-expenses', async (req, res) => {
-    let pool;
-    try {
-        pool = await sql.connect(sqlConfig);
-
-        const liveExpensesQuery = `
-            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+            DECLARE @StartDate date = DATEADD(MONTH, -1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1));
             DECLARE @EndDate   date = EOMONTH(@StartDate);
 
             -- Derive period bounds for averages
@@ -933,6 +699,7 @@ app.get('/api/live-expenses', async (req, res) => {
                     AND J1.BPLId = 1
                     AND J.RefDate >= @L6Start
                     AND J.RefDate <= @EndDate
+                    AND J1.Account NOT IN ('730-01-0010','770-01-0026') -- Exclude amortisman
             )
             SELECT
                 AccountGroup,
@@ -968,101 +735,21 @@ app.get('/api/live-expenses', async (req, res) => {
         res.json(result.recordset);
 
     } catch (error) {
-        console.error('Error fetching live expenses data:', error);
-        res.status(500).json({ error: 'Failed to fetch live expenses data', details: error.message });
+        console.error('Error fetching previous month live expenses data for IZMIR:', error);
+        res.status(500).json({ error: 'Failed to fetch previous month live expenses data for IZMIR', details: error.message });
     } finally {
         if (pool) {
             await pool.close();
         }
     }
 });
-
-app.get('/api/live-expenses-urfa', async (req, res) => {
-    let pool;
-    try {
-        pool = await sql.connect(sqlConfig);
-
-        const liveExpensesQuery = `
-            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
-            DECLARE @EndDate   date = EOMONTH(@StartDate);
-
-            -- Derive period bounds for averages
-            DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
-            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
-
-            WITH Base AS (
-                SELECT
-                    J1.Account,
-                    A.AcctName,
-                    LEFT(J1.Account, 3) AS AccountGroup,
-                    J.RefDate,
-                    (J1.Debit - J1.Credit) AS Amount
-                FROM OJDT J
-                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
-                INNER JOIN OACT A  ON J1.Account = A.AcctCode
-                WHERE
-                    (
-                        J1.Account LIKE '720-%' OR
-                        J1.Account LIKE '730-%' OR
-                        J1.Account LIKE '760-%' OR
-                        J1.Account LIKE '770-%'
-                    )
-                    AND J1.BPLId = 3
-                    AND J.RefDate >= @L6Start
-                    AND J.RefDate <= @EndDate
-            )
-            SELECT
-                AccountGroup,
-                Account,
-                AcctName AS AccountName,
-                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
-                CASE
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
-                    ELSE 'Grand Total'
-                END AS LineType
-            FROM Base
-            GROUP BY
-                GROUPING SETS (
-                    (AccountGroup, Account, AcctName),
-                    (AccountGroup),
-                    ()
-                )
-            ORDER BY
-                CASE WHEN AccountGroup IS NULL THEN 1 ELSE 0 END,
-                AccountGroup,
-                CASE
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 0
-                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 1
-                    ELSE 2
-                END,
-                Account;
-        `;
-        
-        const result = await pool.request().query(liveExpensesQuery);
-        res.json(result.recordset);
-
-    } catch (error) {
-        console.error('Error fetching live expenses data for URFA:', error);
-        res.status(500).json({ error: 'Failed to fetch live expenses data for URFA', details: error.message });
-    } finally {
-        if (pool) {
-            await pool.close();
-        }
-    }
-});
-
-app.get('/api/live-raw-materials', async (req, res) => {
+app.get('/api/live-raw-materials-prev', async (req, res) => {
     let pool;
     try {
         pool = await sql.connect(sqlConfig);
 
         const liveRawMaterialsQuery = `
-            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+            DECLARE @StartDate date = DATEADD(MONTH, -1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1));
             DECLARE @EndDate   date = EOMONTH(@StartDate);
             DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
             DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
@@ -1144,15 +831,94 @@ app.get('/api/live-raw-materials', async (req, res) => {
         res.json(result.recordset);
 
     } catch (error) {
-        console.error('Error fetching live raw materials data:', error);
-        res.status(500).json({ error: 'Failed to fetch live raw materials data', details: error.message });
+        console.error('Error fetching previous month live raw materials data for IZMIR:', error);
+        res.status(500).json({ error: 'Failed to fetch previous month live raw materials data for IZMIR', details: error.message });
     } finally {
         if (pool) {
             await pool.close();
         }
     }
 });
+// API endpoint for Live Expense Tracker URFA
+app.get('/api/live-expenses-urfa', async (req, res) => {
+    let pool;
+    try {
+        pool = await sql.connect(sqlConfig);
 
+        const liveExpensesQuery = `
+            DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+            DECLARE @EndDate   date = EOMONTH(@StartDate);
+
+            -- Derive period bounds for averages
+            DECLARE @MonthStart date      = @StartDate;
+            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
+            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
+            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+
+            WITH Base AS (
+                SELECT
+                    J1.Account,
+                    A.AcctName,
+                    LEFT(J1.Account, 3) AS AccountGroup,
+                    J.RefDate,
+                    (J1.Debit - J1.Credit) AS Amount
+                FROM OJDT J
+                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
+                INNER JOIN OACT A  ON J1.Account = A.AcctCode
+                WHERE
+                    (
+                        J1.Account LIKE '720-%' OR
+                        J1.Account LIKE '730-%' OR
+                        J1.Account LIKE '760-%' OR
+                        J1.Account LIKE '770-%'
+                    )
+                    AND J1.BPLId = 3
+                    AND J.RefDate >= @L6Start
+                    AND J.RefDate <= @EndDate
+                    AND J1.Account NOT IN ('730-01-0010','770-01-0026') -- Exclude amortisman
+            )
+            SELECT
+                AccountGroup,
+                Account,
+                AcctName AS AccountName,
+                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                CASE
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
+                    ELSE 'Grand Total'
+                END AS LineType
+            FROM Base
+            GROUP BY
+                GROUPING SETS (
+                    (AccountGroup, Account, AcctName),
+                    (AccountGroup),
+                    ()
+                )
+            ORDER BY
+                CASE WHEN AccountGroup IS NULL THEN 1 ELSE 0 END,
+                AccountGroup,
+                CASE
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 0
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 1
+                    ELSE 2
+                END,
+                Account;
+        `;
+        
+        const result = await pool.request().query(liveExpensesQuery);
+        res.json(result.recordset);
+
+    } catch (error) {
+        console.error('Error fetching live expenses data for URFA:', error);
+        res.status(500).json({ error: 'Failed to fetch live expenses data for URFA', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
 app.get('/api/live-raw-materials-urfa', async (req, res) => {
     let pool;
     try {
@@ -1210,7 +976,144 @@ app.get('/api/live-raw-materials-urfa', async (req, res) => {
         }
     }
 });
+// API endpoint for Previous Month Live Expense Tracker for URFA
+app.get('/api/live-expenses-urfa-prev', async (req, res) => {
+    let pool;
+    try {
+        pool = await sql.connect(sqlConfig);
 
+        const liveExpensesQuery = `
+            DECLARE @StartDate date = DATEADD(MONTH, -1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1));
+            DECLARE @EndDate   date = EOMONTH(@StartDate);
+
+            -- Derive period bounds for averages
+            DECLARE @MonthStart date      = @StartDate;
+            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
+            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
+            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+
+            WITH Base AS (
+                SELECT
+                    J1.Account,
+                    A.AcctName,
+                    LEFT(J1.Account, 3) AS AccountGroup,
+                    J.RefDate,
+                    (J1.Debit - J1.Credit) AS Amount
+                FROM OJDT J
+                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
+                INNER JOIN OACT A  ON J1.Account = A.AcctCode
+                WHERE
+                    (
+                        J1.Account LIKE '720-%' OR
+                        J1.Account LIKE '730-%' OR
+                        J1.Account LIKE '760-%' OR
+                        J1.Account LIKE '770-%'
+                    )
+                    AND J1.BPLId = 3
+                    AND J.RefDate >= @L6Start
+                    AND J.RefDate <= @EndDate
+                    AND J1.Account NOT IN ('730-01-0010','770-01-0026') -- Exclude amortisman
+            )
+            SELECT
+                AccountGroup,
+                Account,
+                AcctName AS AccountName,
+                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                CASE
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
+                    ELSE 'Grand Total'
+                END AS LineType
+            FROM Base
+            GROUP BY
+                GROUPING SETS (
+                    (AccountGroup, Account, AcctName),
+                    (AccountGroup),
+                    ()
+                )
+            ORDER BY
+                CASE WHEN AccountGroup IS NULL THEN 1 ELSE 0 END,
+                AccountGroup,
+                CASE
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 0
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 1
+                    ELSE 2
+                END,
+                Account;
+        `;
+        
+        const result = await pool.request().query(liveExpensesQuery);
+        res.json(result.recordset);
+
+    } catch (error) {
+        console.error('Error fetching live expenses data for URFA:', error);
+        res.status(500).json({ error: 'Failed to fetch live expenses data for URFA', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+app.get('/api/live-raw-materials-urfa-prev', async (req, res) => {
+    let pool;
+    try {
+        pool = await sql.connect(sqlConfig);
+
+        const liveRawMaterialsQuery = `
+            DECLARE @StartDate date = DATEADD(MONTH, -1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1));
+            DECLARE @EndDate   date = EOMONTH(@StartDate);
+            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+
+            WITH RawMaterials AS (
+                -- Raw Mat. (+20%)
+                SELECT
+                    'Raw Mat. (+20%)' AS PurchaseType,
+                    OINM.DocDate AS RefDate,
+                    (
+                        OINM.OutQty * ISNULL(
+                            CASE
+                                WHEN OINM.Currency <> 'TRY' THEN OINM.Price * NULLIF(OINM.Rate, 0)
+                                ELSE OINM.Price
+                            END, 0)
+                    ) * 1.20 AS Amount
+                FROM OINM
+                LEFT JOIN OITM ON OITM.ItemCode = OINM.ItemCode
+                LEFT JOIN OWHS ON OWHS.WhsCode   = OINM.Warehouse
+                LEFT JOIN OITB ON OITB.ItmsGrpCod = OITM.ItmsGrpCod
+                WHERE
+                    OITB.ItmsGrpCod = 111
+                    AND OINM.TransType = 60
+                    AND OWHS.BPLId = 3
+                    AND CAST(OINM.DocDate AS date) >= @L6Start
+                    AND CAST(OINM.DocDate AS date) <= @EndDate
+            )
+            SELECT
+                PurchaseType,
+                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
+            FROM RawMaterials
+            GROUP BY PurchaseType
+            ORDER BY PurchaseType;
+        `;
+        
+        const result = await pool.request().query(liveRawMaterialsQuery);
+        res.json(result.recordset);
+
+    } catch (error) {
+        console.error('Error fetching live raw materials data for URFA:', error);
+        res.status(500).json({ error: 'Failed to fetch live raw materials data for URFA', details: error.message });
+    } finally {
+        if (pool) {
+            await pool.close();
+        }
+    }
+});
+// API endpoint for Live Expense Tracker FLEX
 app.get('/api/live-expenses-flex', async (req, res) => {
     let pool;
     try {
@@ -1246,6 +1149,7 @@ app.get('/api/live-expenses-flex', async (req, res) => {
                     AND J1.BPLId = 4
                     AND J.RefDate >= @L6Start
                     AND J.RefDate <= @EndDate
+                    AND J1.Account NOT IN ('730-01-0010','770-01-0026') -- Exclude amortisman
             )
             SELECT
                 AccountGroup,
@@ -1289,7 +1193,6 @@ app.get('/api/live-expenses-flex', async (req, res) => {
         }
     }
 });
-
 app.get('/api/live-raw-materials-flex', async (req, res) => {
     let pool;
     try {
@@ -1339,20 +1242,129 @@ app.get('/api/live-raw-materials-flex', async (req, res) => {
         }
     }
 });
+// API endpoint for Previous Month Live Expense Tracker FLEX
+app.get('/api/live-expenses-flex-prev', async (req, res) => {
+    let pool;
+    try {
+        pool = await sql.connect(sqlConfig);
+
+        const liveExpensesQuery = `
+            DECLARE @StartDate date = DATEADD(MONTH, -1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1));
+            DECLARE @EndDate   date = EOMONTH(@StartDate);
+
+            -- Derive period bounds for averages
+            DECLARE @MonthStart date      = @StartDate;
+            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
+            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
+            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+
+            WITH Base AS (
+                SELECT
+                    J1.Account,
+                    A.AcctName,
+                    LEFT(J1.Account, 3) AS AccountGroup,
+                    J.RefDate,
+                    (J1.Debit - J1.Credit) AS Amount
+                FROM OJDT J
+                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
+                INNER JOIN OACT A  ON J1.Account = A.AcctCode
+                WHERE
+                    (
+                        J1.Account LIKE '720-%' OR
+                        J1.Account LIKE '730-%' OR
+                        J1.Account LIKE '760-%' OR
+                        J1.Account LIKE '770-%'
+                    )
+                    AND J1.BPLId = 4
+                    AND J.RefDate >= @L6Start
+                    AND J.RefDate <= @EndDate
+                    AND J1.Account NOT IN ('730-01-0010','770-01-0026') -- Exclude amortisman
+            )
+            SELECT
+                AccountGroup,
+                Account,
+                AcctName AS AccountName,
+                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                CASE
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
+                    ELSE 'Grand Total'
+                END AS LineType
+            FROM Base
+            GROUP BY
+                GROUPING SETS (
+                    (AccountGroup, Account, AcctName),
+                    (AccountGroup),
+                    ()
+                )
+            ORDER BY
+                CASE WHEN AccountGroup IS NULL THEN 1 ELSE 0 END,
+                AccountGroup,
+                CASE
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 0
+                    WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 1
+                    ELSE 2
+                END,
+                Account;
+        `;
+        
+        const result = await pool.request().query(liveExpensesQuery);
+        res.json(result.recordset);
+
     } catch (error) {
-        console.error('Error fetching XPET PAD PURCHASES data:', error);
-        res.status(500).json({ error: 'Failed to fetch XPET PAD PURCHASES data', details: error.message });
+        console.error('Error fetching live expenses data for FLEX:', error);
+        res.status(500).json({ error: 'Failed to fetch live expenses data for FLEX', details: error.message });
     } finally {
         if (pool) {
             await pool.close();
         }
     }
 });
-        res.json(processedData);
+app.get('/api/live-raw-materials-flex-prev', async (req, res) => {
+    let pool;
+    try {
+        pool = await sql.connect(sqlConfig);
+
+        const liveRawMaterialsQuery = `
+            DECLARE @StartDate date = DATEADD(MONTH, -1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1));
+            DECLARE @EndDate   date = EOMONTH(@StartDate);
+            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+
+            WITH RawMaterials AS (
+                SELECT
+                    'Raw Material' AS PurchaseType,
+                    J.RefDate,
+                    (J1.Debit - J1.Credit) AS Amount
+                FROM OJDT J
+                INNER JOIN JDT1 J1 ON J.TransId = J1.TransId
+                WHERE
+                    J1.BPLId = 4
+                    AND J.RefDate >= @L6Start AND J.RefDate <= @EndDate
+                    AND (
+                        J1.Account LIKE '620-01%' OR
+                        J1.Account LIKE '895-01%'
+                    )
+            )
+            SELECT
+                PurchaseType,
+                COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
+            FROM RawMaterials
+            GROUP BY PurchaseType
+            ORDER BY PurchaseType;
+        `;
+        
+        const result = await pool.request().query(liveRawMaterialsQuery);
+        res.json(result.recordset);
 
     } catch (error) {
-        console.error('Error fetching XPET ROLL PURCHASES data:', error);
-        res.status(500).json({ error: 'Failed to fetch XPET ROLL PURCHASES data', details: error.message });
+        console.error('Error fetching live raw materials data for FLEX:', error);
+        res.status(500).json({ error: 'Failed to fetch live raw materials data for FLEX', details: error.message });
     } finally {
         if (pool) {
             await pool.close();
@@ -1360,17 +1372,6 @@ app.get('/api/live-raw-materials-flex', async (req, res) => {
     }
 });
 
-        res.json(processedData);
-
-    } catch (error) {
-        console.error('Error fetching XPET TRAY PURCHASES data:', error);
-        res.status(500).json({ error: 'Failed to fetch XPET TRAY PURCHASES data', details: error.message });
-    } finally {
-        if (pool) {
-            await pool.close();
-        }
-    }
-});
 // API endpoint to fetch average USD currency rate
 app.get('/api/avg-usd-currency', async (req, res) => {
     //const { startDate, endDate } = req.query; // Although query uses GETDATE(), keeping for consistency if needed
