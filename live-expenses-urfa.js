@@ -1,10 +1,38 @@
+// Authentication check
+async function checkAuthentication() {
+    try {
+        const response = await fetch('/api/income-summary?startDate=2024-01-01&endDate=2024-01-01');
+        if (response.status === 401 || response.status === 403) {
+            window.location.href = '/login';
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error('Authentication check failed:', error);
+        return true; // Allow to proceed if check fails
+    }
+}
+
 let nineMonthAvg = 0;
 let liveTurnover = 0;
+let nineMonthAvgPrev = 0;
+let liveTurnoverPrev = 0;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const isAuthenticated = await checkAuthentication();
+    if (!isAuthenticated) return;
+    
+    // Fetch current month data
     fetchLiveExpenses().then(() => {
         fetchLiveRawMaterials().then(() => {
             fetchLiveTurnover();
+        });
+    });
+    
+    // Fetch previous month data
+    fetchLiveExpensesPrev().then(() => {
+        fetchLiveRawMaterialsPrev().then(() => {
+            fetchLiveTurnoverPrev();
         });
     });
 });
@@ -236,6 +264,233 @@ function populateTurnoverAndProfit() {
     profitRow.innerHTML = `
         <td><strong>Profit</strong></td>
         <td><strong>${formatCurrency(liveTurnover - totalCost)}</strong></td>
+        <td></td>
+        <td></td>
+    `;
+    tbody.appendChild(profitRow);
+}
+
+// ============= PREVIOUS MONTH FUNCTIONS =============
+
+async function fetchLiveTurnoverPrev() {
+    const loadingIndicator = document.getElementById('loading');
+    const errorContainer = document.getElementById('error');
+    const errorText = document.getElementById('error-text');
+
+    loadingIndicator.style.display = 'block';
+    errorContainer.style.display = 'none';
+
+    try {
+        const date = new Date();
+        // Get previous month
+        const year = date.getMonth() === 0 ? date.getFullYear() - 1 : date.getFullYear();
+        const month = date.getMonth() === 0 ? 12 : date.getMonth();
+        const lastDay = new Date(year, month, 0).getDate();
+
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+        
+        const response = await fetch(`/api/income-summary?startDate=${startDate}&endDate=${endDate}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        liveTurnoverPrev = data[3] || 0; // URFA is branch 3
+
+        populateTurnoverAndProfitPrev();
+
+    } catch (error) {
+        errorText.textContent = 'Failed to fetch previous month turnover data: ' + error.message;
+        errorContainer.style.display = 'block';
+        console.error('Error fetching previous month turnover data:', error);
+    } finally {
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+async function fetchLiveRawMaterialsPrev() {
+    const loadingIndicator = document.getElementById('loading');
+    const errorContainer = document.getElementById('error');
+    const errorText = document.getElementById('error-text');
+    const tableTitle = document.getElementById('table-title-raw-materials-prev');
+
+    loadingIndicator.style.display = 'block';
+    errorContainer.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/live-raw-materials-urfa-prev');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+                            "July", "August", "September", "October", "November", "December"];
+        const date = new Date();
+        const prevMonth = date.getMonth() === 0 ? 11 : date.getMonth() - 1;
+        tableTitle.textContent = `Raw Materials Live Cost - URFA for ${monthNames[prevMonth]}`;
+
+        populateRawMaterialsTablePrev(data);
+
+    } catch (error) {
+        errorText.textContent = 'Failed to fetch previous month raw materials data: ' + error.message;
+        errorContainer.style.display = 'block';
+        console.error('Error fetching previous month raw materials data:', error);
+    } finally {
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+async function fetchLiveExpensesPrev() {
+    const loadingIndicator = document.getElementById('loading');
+    const errorContainer = document.getElementById('error');
+    const errorText = document.getElementById('error-text');
+    const tableTitle = document.getElementById('table-title-live-prev');
+
+    loadingIndicator.style.display = 'block';
+    errorContainer.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/live-expenses-urfa-prev');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+                            "July", "August", "September", "October", "November", "December"];
+        const date = new Date();
+        const prevMonth = date.getMonth() === 0 ? 11 : date.getMonth() - 1;
+        tableTitle.textContent = `Live Expenses for ${monthNames[prevMonth]}`;
+
+        populateLiveExpenseTablePrev(data);
+
+        const grandTotal = data.find(item => item.LineType === 'Grand Total');
+        if (grandTotal && grandTotal.Last6M_Avg) {
+            nineMonthAvgPrev = grandTotal.Last6M_Avg;
+        }
+
+    } catch (error) {
+        errorText.textContent = 'Failed to fetch previous month expense data: ' + error.message;
+        errorContainer.style.display = 'block';
+        console.error('Error fetching previous month expense data:', error);
+    } finally {
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+function populateLiveExpenseTablePrev(data) {
+    const table = document.getElementById('live-expense-table-prev');
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+
+    thead.innerHTML = `
+        <tr>
+            <th>Account Group</th>
+            <th>Account</th>
+            <th>Account Name</th>
+            <th>Previous Month Total</th>
+            <th>Last 3M Avg.</th>
+            <th>Last 6M Avg.</th>
+        </tr>
+    `;
+
+    tbody.innerHTML = '';
+
+    data.forEach(item => {
+        const row = document.createElement('tr');
+
+        if (item.LineType === 'Subtotal') {
+            row.classList.add('subtotal-row');
+        } else if (item.LineType === 'Grand Total') {
+            row.classList.add('grand-total-row');
+        }
+
+        row.innerHTML = `
+            <td>${item.AccountGroup || '<strong>Grand Total</strong>'}</td>
+            <td>${item.Account || `<strong>${item.AccountGroup} Total</strong>`}</td>
+            <td>${item.AccountName || ''}</td>
+            <td>${formatCurrency(item.Total)}</td>
+            <td>${formatCurrency(item.Last3M_Avg)}</td>
+            <td>${formatCurrency(item.Last6M_Avg)}</td>
+        `;
+
+        tbody.appendChild(row);
+    });
+}
+
+function populateRawMaterialsTablePrev(data) {
+    const table = document.getElementById('raw-materials-table-prev');
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+
+    thead.innerHTML = `
+        <tr>
+            <th>Purchase Type</th>
+            <th>Previous Month Total</th>
+            <th>Last 3M Avg.</th>
+            <th>Last 6M Avg.</th>
+        </tr>
+    `;
+
+    tbody.innerHTML = '';
+
+    let currentMonthTotal = 0;
+
+    data.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${item.PurchaseType}</td>
+            <td>${formatCurrency(item.Total)}</td>
+            <td>${formatCurrency(item.Last3M_Avg)}</td>
+            <td>${formatCurrency(item.Last6M_Avg)}</td>
+        `;
+        tbody.appendChild(row);
+        currentMonthTotal += item.Total;
+    });
+
+    currentMonthTotal += nineMonthAvgPrev;
+    const totalsRow = document.createElement('tr');
+    totalsRow.classList.add('grand-total-row');
+    totalsRow.innerHTML = `
+        <td><strong>Total</strong></td>
+        <td><strong>${formatCurrency(currentMonthTotal)}</strong></td>
+        <td></td>
+        <td></td>
+    `;
+    tbody.appendChild(totalsRow);
+    
+    const averageRow = document.createElement('tr');
+    averageRow.innerHTML = `
+        <td>6 Month Average</td>
+        <td>${formatCurrency(nineMonthAvgPrev)}</td>
+        <td></td>
+        <td></td>
+    `;
+    tbody.insertBefore(averageRow, totalsRow);
+}
+
+function populateTurnoverAndProfitPrev() {
+    const table = document.getElementById('raw-materials-table-prev');
+    const tbody = table.querySelector('tbody');
+    const totalsRow = tbody.querySelector('.grand-total-row');
+    const totalCostText = totalsRow.cells[1].textContent;
+    const totalCost = parseFloat(totalCostText.replace(/[^0-9,-]+/g, "").replace(",", "."));
+    
+    const turnoverRow = document.createElement('tr');
+    turnoverRow.innerHTML = `
+        <td><strong>Turnover</strong></td>
+        <td><strong>${formatCurrency(liveTurnoverPrev)}</strong></td>
+        <td></td>
+        <td></td>
+    `;
+    tbody.insertBefore(turnoverRow, totalsRow);
+
+    const profitRow = document.createElement('tr');
+    profitRow.classList.add('grand-total-row');
+    profitRow.innerHTML = `
+        <td><strong>Profit</strong></td>
+        <td><strong>${formatCurrency(liveTurnoverPrev - totalCost)}</strong></td>
         <td></td>
         <td></td>
     `;

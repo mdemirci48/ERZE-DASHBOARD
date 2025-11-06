@@ -15,23 +15,51 @@
         </div>
     </header>
     <main>
-        <div class="dashboard-container">
-            <h2 id="table-title-live" class="table-title">Live Expenses</h2>
-            <div id="live-expense-container" class="table-container">
-                <table id="live-expense-table" class="data-table">
-                    <thead></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <!-- Previous Month Tables (Left Side) -->
+            <div style="flex: 1; min-width: 600px;">
+                <div class="dashboard-container">
+                    <h2 id="table-title-live-prev" class="table-title">Live Expenses</h2>
+                    <div id="live-expense-container-prev" class="table-container">
+                        <table id="live-expense-table-prev" class="data-table">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
 
-        <div class="dashboard-container">
-            <h2 id="table-title-raw-materials" class="table-title">Raw Materials Live Cost - URFA</h2>
-            <div id="raw-materials-container" class="table-container">
-                <table id="raw-materials-table" class="data-table">
-                    <thead></thead>
-                    <tbody></tbody>
-                </table>
+                <div class="dashboard-container">
+                    <h2 id="table-title-raw-materials-prev" class="table-title">Raw Materials Live Cost - URFA</h2>
+                    <div id="raw-materials-container-prev" class="table-container">
+                        <table id="raw-materials-table-prev" class="data-table">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Month Tables (Right Side) -->
+            <div style="flex: 1; min-width: 600px;">
+                <div class="dashboard-container">
+                    <h2 id="table-title-live" class="table-title">Live Expenses</h2>
+                    <div id="live-expense-container" class="table-container">
+                        <table id="live-expense-table" class="data-table">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="dashboard-container">
+                    <h2 id="table-title-raw-materials" class="table-title">Raw Materials Live Cost - URFA</h2>
+                    <div id="raw-materials-container" class="table-container">
+                        <table id="raw-materials-table" class="data-table">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </main>

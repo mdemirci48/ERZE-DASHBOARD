@@ -4,8 +4,10 @@
   "description": "CEO Income Dashboard for SAP Business One with live SQL data integration",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "concurrently \"node server.js\" \"node server-ceo.js\"",
+    "dev": "concurrently \"nodemon server.js\" \"nodemon server-ceo.js\"",
+    "server": "node server.js",
+    "server-ceo": "node server-ceo.js"
   },
   "keywords": [
     "sap",
@@ -24,6 +26,7 @@
     "mssql": "^9.1.1"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "nodemon": "^3.0.1"
   },
   "engines": {

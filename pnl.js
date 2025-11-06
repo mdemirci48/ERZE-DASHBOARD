@@ -1,3 +1,18 @@
+// Authentication check
+async function checkAuthentication() {
+    try {
+        const response = await fetch('/api/income-summary?startDate=2024-01-01&endDate=2024-01-01');
+        if (response.status === 401 || response.status === 403) {
+            window.location.href = '/login';
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error('Authentication check failed:', error);
+        return true; // Allow to proceed if check fails
+    }
+}
+
 // Current date tracking
 let currentDate = new Date();
 
@@ -20,7 +35,10 @@ const branchNames = {
 };
 
 // Initialize the dashboard
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const isAuthenticated = await checkAuthentication();
+    if (!isAuthenticated) return;
+    
     updatePeriodDisplay();
     fetchDataForCurrentPeriod();
     

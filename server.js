@@ -499,9 +499,11 @@ app.get('/api/live-expenses', async (req, res) => {
 
             -- Derive period bounds for averages
             DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
-            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+            
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH Base AS (
                 SELECT
@@ -530,8 +532,8 @@ app.get('/api/live-expenses', async (req, res) => {
                 Account,
                 AcctName AS AccountName,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg,
                 CASE 
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
@@ -575,9 +577,11 @@ app.get('/api/live-raw-materials', async (req, res) => {
         const liveRawMaterialsQuery = `
             DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
             DECLARE @EndDate   date = EOMONTH(@StartDate);
-            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            
             DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
             DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH RawMaterials AS (
                 -- XPET TRAY
@@ -644,8 +648,8 @@ app.get('/api/live-raw-materials', async (req, res) => {
             SELECT
                 PurchaseType,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg
             FROM RawMaterials
             GROUP BY PurchaseType
             ORDER BY PurchaseType;
@@ -675,9 +679,11 @@ app.get('/api/live-expenses-prev', async (req, res) => {
 
             -- Derive period bounds for averages
             DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
-            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+            
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH Base AS (
                 SELECT
@@ -706,8 +712,8 @@ app.get('/api/live-expenses-prev', async (req, res) => {
                 Account,
                 AcctName AS AccountName,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg,
                 CASE 
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
@@ -751,9 +757,11 @@ app.get('/api/live-raw-materials-prev', async (req, res) => {
         const liveRawMaterialsQuery = `
             DECLARE @StartDate date = DATEADD(MONTH, -1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1));
             DECLARE @EndDate   date = EOMONTH(@StartDate);
-            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            
             DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
             DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH RawMaterials AS (
                 -- XPET TRAY
@@ -820,8 +828,8 @@ app.get('/api/live-raw-materials-prev', async (req, res) => {
             SELECT
                 PurchaseType,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg
             FROM RawMaterials
             GROUP BY PurchaseType
             ORDER BY PurchaseType;
@@ -851,9 +859,11 @@ app.get('/api/live-expenses-urfa', async (req, res) => {
 
             -- Derive period bounds for averages
             DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
-            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+            
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH Base AS (
                 SELECT
@@ -882,8 +892,8 @@ app.get('/api/live-expenses-urfa', async (req, res) => {
                 Account,
                 AcctName AS AccountName,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg,
                 CASE
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
@@ -927,9 +937,11 @@ app.get('/api/live-raw-materials-urfa', async (req, res) => {
         const liveRawMaterialsQuery = `
             DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
             DECLARE @EndDate   date = EOMONTH(@StartDate);
-            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            
             DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
             DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH RawMaterials AS (
                 -- Raw Mat. (+20%)
@@ -957,8 +969,8 @@ app.get('/api/live-raw-materials-urfa', async (req, res) => {
             SELECT
                 PurchaseType,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg
             FROM RawMaterials
             GROUP BY PurchaseType
             ORDER BY PurchaseType;
@@ -988,9 +1000,11 @@ app.get('/api/live-expenses-urfa-prev', async (req, res) => {
 
             -- Derive period bounds for averages
             DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
-            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+            
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH Base AS (
                 SELECT
@@ -1019,8 +1033,8 @@ app.get('/api/live-expenses-urfa-prev', async (req, res) => {
                 Account,
                 AcctName AS AccountName,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg,
                 CASE
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
@@ -1064,9 +1078,11 @@ app.get('/api/live-raw-materials-urfa-prev', async (req, res) => {
         const liveRawMaterialsQuery = `
             DECLARE @StartDate date = DATEADD(MONTH, -1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1));
             DECLARE @EndDate   date = EOMONTH(@StartDate);
-            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            
             DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
             DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH RawMaterials AS (
                 -- Raw Mat. (+20%)
@@ -1094,8 +1110,8 @@ app.get('/api/live-raw-materials-urfa-prev', async (req, res) => {
             SELECT
                 PurchaseType,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg
             FROM RawMaterials
             GROUP BY PurchaseType
             ORDER BY PurchaseType;
@@ -1125,9 +1141,11 @@ app.get('/api/live-expenses-flex', async (req, res) => {
 
             -- Derive period bounds for averages
             DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
-            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+            
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH Base AS (
                 SELECT
@@ -1156,8 +1174,8 @@ app.get('/api/live-expenses-flex', async (req, res) => {
                 Account,
                 AcctName AS AccountName,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg,
                 CASE
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
@@ -1201,9 +1219,11 @@ app.get('/api/live-raw-materials-flex', async (req, res) => {
         const liveRawMaterialsQuery = `
             DECLARE @StartDate date = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
             DECLARE @EndDate   date = EOMONTH(@StartDate);
-            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            
             DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
             DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH RawMaterials AS (
                 SELECT
@@ -1223,8 +1243,8 @@ app.get('/api/live-raw-materials-flex', async (req, res) => {
             SELECT
                 PurchaseType,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg
             FROM RawMaterials
             GROUP BY PurchaseType
             ORDER BY PurchaseType;
@@ -1254,9 +1274,11 @@ app.get('/api/live-expenses-flex-prev', async (req, res) => {
 
             -- Derive period bounds for averages
             DECLARE @MonthStart date      = @StartDate;
-            DECLARE @PrevMonthEnd date    = EOMONTH(DATEADD(MONTH, -1, @MonthStart));
-            DECLARE @L3Start date         = DATEADD(MONTH, -4, @MonthStart);
-            DECLARE @L6Start date         = DATEADD(MONTH, -7, @MonthStart);
+            
+            DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
+            DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH Base AS (
                 SELECT
@@ -1285,8 +1307,8 @@ app.get('/api/live-expenses-flex-prev', async (req, res) => {
                 Account,
                 AcctName AS AccountName,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg,
                 CASE
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 0 THEN 'Detail'
                     WHEN GROUPING(AccountGroup) = 0 AND GROUPING(Account) = 1 THEN 'Subtotal'
@@ -1330,9 +1352,11 @@ app.get('/api/live-raw-materials-flex-prev', async (req, res) => {
         const liveRawMaterialsQuery = `
             DECLARE @StartDate date = DATEADD(MONTH, -1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1));
             DECLARE @EndDate   date = EOMONTH(@StartDate);
-            DECLARE @PrevMonthEnd date = EOMONTH(DATEADD(MONTH, -1, @StartDate));
+            
             DECLARE @L3Start date = DATEADD(MONTH, -4, @StartDate);
+            DECLARE @L3End date = EOMONTH(DATEADD(MONTH, 2, @L3Start));
             DECLARE @L6Start date = DATEADD(MONTH, -7, @StartDate);
+            DECLARE @L6End date = EOMONTH(DATEADD(MONTH, 5, @L6Start));
 
             WITH RawMaterials AS (
                 SELECT
@@ -1352,8 +1376,8 @@ app.get('/api/live-raw-materials-flex-prev', async (req, res) => {
             SELECT
                 PurchaseType,
                 COALESCE(SUM(CASE WHEN RefDate >= @StartDate AND RefDate <= @EndDate THEN Amount END), 0) AS Total,
-                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 3.0 AS Last3M_Avg,
-                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @PrevMonthEnd THEN Amount END), 0) / 6.0 AS Last6M_Avg
+                COALESCE(SUM(CASE WHEN RefDate >= @L3Start AND RefDate <= @L3End THEN Amount END), 0) / 3.0 AS Last3M_Avg,
+                COALESCE(SUM(CASE WHEN RefDate >= @L6Start AND RefDate <= @L6End THEN Amount END), 0) / 6.0 AS Last6M_Avg
             FROM RawMaterials
             GROUP BY PurchaseType
             ORDER BY PurchaseType;
